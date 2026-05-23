@@ -19,6 +19,9 @@ build/
 .env
 .env.local
 .env.*.local
+venv/
+.venv/
+env/
 
 # Docker
 *.pid
