@@ -1,0 +1,27 @@
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.npm/
+.yarn/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+venv/
+.venv/
+env/
+
+# Docker
+*.pid
