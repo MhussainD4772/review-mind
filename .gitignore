@@ -25,3 +25,6 @@ env/
 
 # Docker
 *.pid
+
+# GitHub App credentials
+*.pem
