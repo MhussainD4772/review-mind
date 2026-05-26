@@ -15,6 +15,7 @@ class Repository(Base):
     installation_id = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
 class PullRequest(Base):
     __tablename__ = "pull_requests"
 
@@ -25,18 +26,20 @@ class PullRequest(Base):
     author = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
 class ReviewStatus(enum.Enum):
     queued = "queued"
     processing = "processing"
     completed = "completed"
     failed = "failed"
 
+
 class Review(Base):
     __tablename__ = "reviews"
 
     id = Column(Integer, primary_key=True)
     pull_request_id = Column(Integer, ForeignKey("pull_requests.id"), nullable=False)
-    status = Column(Enum(ReviewStatus),default=ReviewStatus.queued, nullable=False)
+    status = Column(Enum(ReviewStatus), default=ReviewStatus.queued, nullable=False)
     summary = Column(Text, nullable=True)
     posted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
