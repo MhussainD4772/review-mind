@@ -1,7 +1,8 @@
-from fastapi import FastAPI
-from app.api.webhooks import router as webhook_router
 import logging
 
+from fastapi import FastAPI
+
+from app.api.webhooks import router as webhook_router
 
 app = FastAPI(
     title="ReviewMind API",
@@ -16,5 +17,3 @@ logging.basicConfig(level=logging.INFO)
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "reviewmind-api"}
-
-
