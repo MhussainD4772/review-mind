@@ -47,6 +47,24 @@ services:
       redis:
         condition: service_healthy
 
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/docker/backend.Dockerfile
+    container_name: reviewmind-worker
+    command: celery -A app.workers.celery_app.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://reviewmind:reviewmind_dev@postgres:5432/reviewmind
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ../app:/code/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+
   frontend:
     build:
       context: ..
