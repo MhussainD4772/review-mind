@@ -6,6 +6,8 @@ import os
 from dotenv import load_dotenv
 from fastapi import APIRouter, Header, HTTPException, Request
 
+from app.workers.tasks import review_pull_request
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -46,6 +48,11 @@ async def github_webhook(
             logger.info(
                 f"PR opened: #{pr['number']} '{pr['title']}' "
                 f"in {repo['full_name']} by {pr['user']['login']}"
+            )
+            review_pull_request.delay(
+                repo_full_name=repo["full_name"],
+                pr_number=pr["number"],
+                pr_title=pr["title"],
             )
 
     return {"status": "ok"}
