@@ -56,8 +56,13 @@ services:
     environment:
       DATABASE_URL: postgresql://reviewmind:reviewmind_dev@postgres:5432/reviewmind
       REDIS_URL: redis://redis:6379/0
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_PRIVATE_KEY_PATH: ${GITHUB_PRIVATE_KEY_PATH}
+      GITHUB_APP_INSTALLATION_ID: ${GITHUB_APP_INSTALLATION_ID}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     volumes:
       - ../app:/code/app
+      - ../${GITHUB_PRIVATE_KEY_PATH}:/code/${GITHUB_PRIVATE_KEY_PATH}
     depends_on:
       postgres:
         condition: service_healthy
