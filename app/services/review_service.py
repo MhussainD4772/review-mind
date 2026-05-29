@@ -69,3 +69,16 @@ Keep the review concise — maximum 600 words. Focus on the most impactful issue
     model = genai.GenerativeModel("gemini-2.5-flash")
     response = model.generate_content(prompt)
     return response.text
+
+
+def post_review_comment(repo_full_name: str, pr_number: int, review: str) -> None:
+    with open(GITHUB_PRIVATE_KEY_PATH, "r") as f:
+        private_key = f.read()
+
+    auth = Auth.AppAuth(GITHUB_APP_ID, private_key)
+    gi = GithubIntegration(auth=auth)
+    github_client = gi.get_github_for_installation(GITHUB_APP_INSTALLATION_ID)
+
+    repo = github_client.get_repo(repo_full_name)
+    pull_request = repo.get_pull(pr_number)
+    pull_request.create_issue_comment(review)
