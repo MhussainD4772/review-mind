@@ -1,6 +1,10 @@
 import logging
 
-from app.services.review_service import fetch_pr_diff, generate_review
+from app.services.review_service import (
+    fetch_pr_diff,
+    generate_review,
+    post_review_comment,
+)
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -18,5 +22,8 @@ def review_pull_request(repo_full_name: str, pr_number: int, pr_title: str):
 
     review = generate_review(diff, pr_title)
     logger.info(f"Review generated for PR #{pr_number}:\n{review}")
+
+    post_review_comment(repo_full_name, pr_number, review)
+    logger.info(f"Review posted to PR #{pr_number}")
 
     return {"status": "completed", "pr_number": pr_number}
