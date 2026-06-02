@@ -53,6 +53,9 @@ async def github_webhook(
                 repo_full_name=repo["full_name"],
                 pr_number=pr["number"],
                 pr_title=pr["title"],
+                github_repo_id=repo["id"],
+                installation_id=data["installation"]["id"],
+                pr_author=pr["user"]["login"],
             )
 
     return {"status": "ok"}

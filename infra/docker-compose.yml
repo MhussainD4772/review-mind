@@ -37,7 +37,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://reviewmind:reviewmind_dev@postgres:5432/reviewmind
+      DATABASE_URL: postgresql+asyncpg://reviewmind:reviewmind_dev@postgres:5432/reviewmind
       REDIS_URL: redis://redis:6379/0
     volumes:
       - ../app:/code/app
@@ -54,7 +54,7 @@ services:
     container_name: reviewmind-worker
     command: celery -A app.workers.celery_app.celery_app worker --loglevel=info
     environment:
-      DATABASE_URL: postgresql://reviewmind:reviewmind_dev@postgres:5432/reviewmind
+      DATABASE_URL: postgresql+asyncpg://reviewmind:reviewmind_dev@postgres:5432/reviewmind
       REDIS_URL: redis://redis:6379/0
       GITHUB_APP_ID: ${GITHUB_APP_ID}
       GITHUB_PRIVATE_KEY_PATH: ${GITHUB_PRIVATE_KEY_PATH}

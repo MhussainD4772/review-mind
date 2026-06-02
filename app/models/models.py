@@ -1,6 +1,15 @@
 import enum
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.sql import func
 
 from app.db.session import Base
@@ -18,6 +27,9 @@ class Repository(Base):
 
 class PullRequest(Base):
     __tablename__ = "pull_requests"
+    __table_args__ = (
+        UniqueConstraint("repo_id", "github_pr_number", name="uq_pr_repo_number"),
+    )
 
     id = Column(Integer, primary_key=True)
     repo_id = Column(Integer, ForeignKey("repositories.id"), nullable=False)

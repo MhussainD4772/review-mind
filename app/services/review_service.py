@@ -62,6 +62,7 @@ For each issue you find:
 - Explain WHY it matters
 - Show a concrete better approach
 
+Do not address the developer by name or use any name placeholders.
 Be specific and constructive. If a section looks good, say so briefly.
 End with a short overall summary of the PR quality and the top 1-2 things to improve.
 Keep the review concise — maximum 600 words. Focus on the most impactful issues only."""
