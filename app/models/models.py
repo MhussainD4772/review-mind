@@ -1,5 +1,6 @@
 import enum
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Column,
     DateTime,
@@ -54,4 +55,16 @@ class Review(Base):
     status = Column(Enum(ReviewStatus), default=ReviewStatus.queued, nullable=False)
     summary = Column(Text, nullable=True)
     posted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class CodeChunk(Base):
+    __tablename__ = "code_chunks"
+    id = Column(Integer, primary_key=True)
+    repository_id = Column(Integer, ForeignKey("repositories.id"), nullable=False)
+    file_path = Column(String, nullable=False)
+    start_line = Column(Integer, nullable=False)
+    end_line = Column(Integer, nullable=False)
+    content = Column(Text, nullable=False)
+    embedding = Column(Vector(768), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
