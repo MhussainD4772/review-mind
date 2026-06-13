@@ -5,6 +5,9 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from github import Auth, GithubIntegration
 
+from app.db.session import SyncSessionLocal
+from app.models.models import CodeChunk
+
 load_dotenv()
 
 GITHUB_APP_ID = os.getenv("GITHUB_APP_ID", "0")
@@ -108,3 +111,40 @@ def fetch_repository_files(repo_full_name: str, installation_id: int) -> list[di
         files.append({"path": element.path, "content": content})
 
     return files
+
+
+def index_repository(
+    repo_full_name: str, installation_id: int, repository_id: int
+) -> int:
+    db = SyncSessionLocal()
+    try:
+        db.query(CodeChunk).filter(CodeChunk.repository_id == repository_id).delete()
+        db.commit()
+
+        files = fetch_repository_files(repo_full_name, installation_id)
+
+        total_chunks = 0
+        for file in files:
+            chunks = chunk_code(file["content"])
+            if not chunks:
+                continue
+
+            vectors = embed_texts([c.content for c in chunks])
+
+            for chunk, vector in zip(chunks, vectors):
+                db.add(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file["path"],
+                        start_line=chunk.start_line,
+                        end_line=chunk.end_line,
+                        content=chunk.content,
+                        embedding=vector,
+                    )
+                )
+            total_chunks += len(chunks)
+
+        db.commit()
+        return total_chunks
+    finally:
+        db.close()
