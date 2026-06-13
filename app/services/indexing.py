@@ -1,8 +1,13 @@
 from dataclasses import dataclass
 
+import google.generativeai as genai
+
 WINDOW_SIZE = 40
 OVERLAP_SIZE = 10
 STEP = WINDOW_SIZE - OVERLAP_SIZE
+
+EMBEDDING_MODEL = "models/gemini-embedding-001"
+EMBEDDING_DIMENSIONS = 768
 
 
 @dataclass
@@ -36,3 +41,16 @@ def chunk_code(code: str) -> list[Chunk]:
         start += STEP
 
     return chunks
+
+
+def embed_texts(texts: list[str]) -> list[list[float]]:
+    if not texts:
+        return []
+
+    response = genai.embed_content(
+        model=EMBEDDING_MODEL,
+        content=texts,
+        task_type="RETRIEVAL_DOCUMENT",
+        output_dimensionality=EMBEDDING_DIMENSIONS,
+    )
+    return response["embedding"]
