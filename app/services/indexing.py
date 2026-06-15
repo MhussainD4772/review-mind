@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import google.generativeai as genai
 from dotenv import load_dotenv
 from github import Auth, GithubIntegration
+from sqlalchemy import select
 
 from app.db.session import SyncSessionLocal
 from app.models.models import CodeChunk
@@ -146,5 +147,24 @@ def index_repository(
 
         db.commit()
         return total_chunks
+    finally:
+        db.close()
+
+
+def retrieve_relevant_chunks(
+    diff: str, repository_id: int, top_k: int = 5
+) -> list[CodeChunk]:
+    query_vector = embed_texts([diff])[0]
+
+    db = SyncSessionLocal()
+    try:
+        stmt = (
+            select(CodeChunk)
+            .where(CodeChunk.repository_id == repository_id)
+            .order_by(CodeChunk.embedding.cosine_distance(query_vector))
+            .limit(top_k)
+        )
+        results = db.execute(stmt).scalars().all()
+        return results
     finally:
         db.close()
