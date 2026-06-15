@@ -6,7 +6,9 @@ import os
 from dotenv import load_dotenv
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.workers.tasks import review_pull_request
+from app.db.session import SyncSessionLocal
+from app.services.persistence import upsert_repository
+from app.workers.tasks import index_repository_task, review_pull_request
 
 load_dotenv()
 
@@ -57,5 +59,30 @@ async def github_webhook(
                 installation_id=data["installation"]["id"],
                 pr_author=pr["user"]["login"],
             )
+
+    if x_github_event == "installation":
+        data = await request.json()
+        action = data.get("action")
+        if action == "created":
+            installation_id = data["installation"]["id"]
+            repositories = data.get("repositories", [])
+
+            db = SyncSessionLocal()
+            try:
+                for repo in repositories:
+                    repository_id = upsert_repository(
+                        db,
+                        repo["id"],
+                        repo["full_name"],
+                        installation_id,
+                    )
+                    logger.info(f"Installed on {repo['full_name']}, indexing queued")
+                    index_repository_task.delay(
+                        repo_full_name=repo["full_name"],
+                        installation_id=installation_id,
+                        repository_id=repository_id,
+                    )
+            finally:
+                db.close()
 
     return {"status": "ok"}
