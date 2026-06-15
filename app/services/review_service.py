@@ -11,19 +11,18 @@ logger = logging.getLogger(__name__)
 
 GITHUB_APP_ID = os.getenv("GITHUB_APP_ID", "0")
 GITHUB_PRIVATE_KEY_PATH = os.getenv("GITHUB_PRIVATE_KEY_PATH", "")
-GITHUB_APP_INSTALLATION_ID = int(os.getenv("GITHUB_APP_INSTALLATION_ID", "0"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
 
-def fetch_pr_diff(repo_full_name: str, pr_number: int) -> str:
+def fetch_pr_diff(repo_full_name: str, pr_number: int, installation_id: int) -> str:
     with open(GITHUB_PRIVATE_KEY_PATH, "r") as f:
         private_key = f.read()
 
     auth = Auth.AppAuth(GITHUB_APP_ID, private_key)
     gi = GithubIntegration(auth=auth)
-    github_client = gi.get_github_for_installation(GITHUB_APP_INSTALLATION_ID)
+    github_client = gi.get_github_for_installation(installation_id)
 
     repo = github_client.get_repo(repo_full_name)
     pull_request = repo.get_pull(pr_number)
@@ -38,12 +37,15 @@ def fetch_pr_diff(repo_full_name: str, pr_number: int) -> str:
     return diff_text
 
 
-def generate_review(diff: str, pr_title: str) -> str:
+def generate_review(diff: str, pr_title: str, context: str = "") -> str:
     prompt = f"""You are a senior software engineer conducting a pull request review.
 Your job is to mentor a junior developer — not just identify problems,
 but explain WHY each issue matters and HOW to think about it better.
 
 PR Title: {pr_title}
+
+Relevant code from elsewhere in the codebase (for context):
+{context}
 
 Code diff:
 {diff}
@@ -72,13 +74,15 @@ Keep the review concise — maximum 600 words. Focus on the most impactful issue
     return response.text
 
 
-def post_review_comment(repo_full_name: str, pr_number: int, review: str) -> None:
+def post_review_comment(
+    repo_full_name: str, pr_number: int, review: str, installation_id: int
+) -> None:
     with open(GITHUB_PRIVATE_KEY_PATH, "r") as f:
         private_key = f.read()
 
     auth = Auth.AppAuth(GITHUB_APP_ID, private_key)
     gi = GithubIntegration(auth=auth)
-    github_client = gi.get_github_for_installation(GITHUB_APP_INSTALLATION_ID)
+    github_client = gi.get_github_for_installation(installation_id)
 
     repo = github_client.get_repo(repo_full_name)
     pull_request = repo.get_pull(pr_number)

@@ -1,7 +1,7 @@
 import logging
 
 from app.db.session import SyncSessionLocal
-from app.services.indexing import index_repository
+from app.services.indexing import index_repository, retrieve_relevant_chunks
 from app.services.persistence import (
     complete_review,
     create_review,
@@ -17,6 +17,17 @@ from app.services.review_service import (
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+def format_chunks(chunks) -> str:
+    if not chunks:
+        return "No additional codebase context available."
+    parts = []
+    for c in chunks:
+        parts.append(
+            f"--- File: {c.file_path} (lines {c.start_line}-{c.end_line}) ---\n{c.content}"
+        )
+    return "\n\n".join(parts)
 
 
 @celery_app.task(name="review_pull_request")
@@ -45,14 +56,18 @@ def review_pull_request(
         )
         review_id = create_review(db, pr_id)
 
-        diff = fetch_pr_diff(repo_full_name, pr_number)
+        diff = fetch_pr_diff(repo_full_name, pr_number, installation_id)
         if not diff:
             logger.warning(f"No diff found for PR #{pr_number}")
             fail_review(db, review_id)
             return {"status": "skipped", "reason": "empty diff"}
 
-        review = generate_review(diff, pr_title)
-        post_review_comment(repo_full_name, pr_number, review)
+        chunks = retrieve_relevant_chunks(diff, repo_id)
+        context = format_chunks(chunks)
+        logger.info(f"Retrieved {len(chunks)} context chunks for PR #{pr_number}")
+
+        review = generate_review(diff, pr_title, context)
+        post_review_comment(repo_full_name, pr_number, review, installation_id)
         complete_review(db, review_id, review)
 
         logger.info(f"Review posted to PR #{pr_number}")
