@@ -25,7 +25,8 @@ def format_chunks(chunks) -> str:
     parts = []
     for c in chunks:
         parts.append(
-            f"--- File: {c.file_path} (lines {c.start_line}-{c.end_line}) ---\n{c.content}"
+            f"--- File: {c.file_path} "
+            f"(lines {c.start_line}-{c.end_line}) ---\n{c.content}"
         )
     return "\n\n".join(parts)
 
