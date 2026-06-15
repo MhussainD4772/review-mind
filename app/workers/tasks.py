@@ -1,6 +1,7 @@
 import logging
 
 from app.db.session import SyncSessionLocal
+from app.services.indexing import index_repository
 from app.services.persistence import (
     complete_review,
     create_review,
@@ -66,3 +67,13 @@ def review_pull_request(
         raise
     finally:
         db.close()
+
+
+@celery_app.task(name="index_repository")
+def index_repository_task(
+    repo_full_name: str, installation_id: int, repository_id: int
+):
+    logger.info(f"Worker picked up indexing job for {repo_full_name}")
+    count = index_repository(repo_full_name, installation_id, repository_id)
+    logger.info(f"Indexed {count} chunks for {repo_full_name}")
+    return {"status": "completed", "chunks": count}
