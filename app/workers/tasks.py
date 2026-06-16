@@ -17,7 +17,8 @@ from app.services.review_service import (
     fetch_pr_changed_files,
     fetch_pr_diff,
     generate_review,
-    post_review_comment,
+    post_placeholder_comment,
+    update_comment,
 )
 from app.workers.celery_app import celery_app
 
@@ -48,7 +49,6 @@ def review_pull_request(
     logger.info(
         f"Worker picked up job: PR #{pr_number} '{pr_title}' in {repo_full_name}"
     )
-
     db = SyncSessionLocal()
     review_id = None
     try:
@@ -62,9 +62,12 @@ def review_pull_request(
         )
         review_id = create_review(db, pr_id)
 
+        comment = post_placeholder_comment(repo_full_name, pr_number, installation_id)
+
         diff = fetch_pr_diff(repo_full_name, pr_number, installation_id)
         if not diff:
             logger.warning(f"No diff found for PR #{pr_number}")
+            update_comment(comment, "No reviewable changes found in this PR.")
             fail_review(db, review_id)
             return {"status": "skipped", "reason": "empty diff"}
 
@@ -73,16 +76,13 @@ def review_pull_request(
         logger.info(f"Retrieved {len(chunks)} context chunks for PR #{pr_number}")
 
         review = generate_review(diff, pr_title, context)
-        post_review_comment(repo_full_name, pr_number, review, installation_id)
+        update_comment(comment, review)
         complete_review(db, review_id, review)
 
         logger.info(f"Review posted to PR #{pr_number}")
         return {"status": "completed", "pr_number": pr_number}
-
     except Exception:
-
         logger.exception(f"Review failed for PR #{pr_number}")
-
         if review_id is not None:
             fail_review(db, review_id)
         raise

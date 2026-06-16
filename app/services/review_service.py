@@ -74,9 +74,7 @@ Keep the review concise — maximum 600 words. Focus on the most impactful issue
     return response.text
 
 
-def post_review_comment(
-    repo_full_name: str, pr_number: int, review: str, installation_id: int
-) -> None:
+def post_placeholder_comment(repo_full_name: str, pr_number: int, installation_id: int):
     with open(GITHUB_PRIVATE_KEY_PATH, "r") as f:
         private_key = f.read()
 
@@ -86,7 +84,13 @@ def post_review_comment(
 
     repo = github_client.get_repo(repo_full_name)
     pull_request = repo.get_pull(pr_number)
-    pull_request.create_issue_comment(review)
+    return pull_request.create_issue_comment(
+        "🔍 ReviewMind is analyzing your changes..."
+    )
+
+
+def update_comment(comment, review: str) -> None:
+    comment.edit(review)
 
 
 def fetch_pr_changed_files(
