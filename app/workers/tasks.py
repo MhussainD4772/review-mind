@@ -52,6 +52,9 @@ def review_pull_request(
     db = SyncSessionLocal()
     review_id = None
     try:
+
+        comment = post_placeholder_comment(repo_full_name, pr_number, installation_id)
+
         repo_id = upsert_repository(db, github_repo_id, repo_full_name, installation_id)
         pr_id = upsert_pull_request(
             db,
@@ -61,8 +64,6 @@ def review_pull_request(
             pr_author,
         )
         review_id = create_review(db, pr_id)
-
-        comment = post_placeholder_comment(repo_full_name, pr_number, installation_id)
 
         diff = fetch_pr_diff(repo_full_name, pr_number, installation_id)
         if not diff:
