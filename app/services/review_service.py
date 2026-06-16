@@ -87,3 +87,19 @@ def post_review_comment(
     repo = github_client.get_repo(repo_full_name)
     pull_request = repo.get_pull(pr_number)
     pull_request.create_issue_comment(review)
+
+
+def fetch_pr_changed_files(
+    repo_full_name: str, pr_number: int, installation_id: int
+) -> list[str]:
+    with open(GITHUB_PRIVATE_KEY_PATH, "r") as f:
+        private_key = f.read()
+
+    auth = Auth.AppAuth(GITHUB_APP_ID, private_key)
+    gi = GithubIntegration(auth=auth)
+    github_client = gi.get_github_for_installation(installation_id)
+
+    repo = github_client.get_repo(repo_full_name)
+    pull_request = repo.get_pull(pr_number)
+
+    return [f.filename for f in pull_request.get_files()]

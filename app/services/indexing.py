@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass
 
@@ -10,6 +11,7 @@ from app.db.session import SyncSessionLocal
 from app.models.models import CodeChunk
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 GITHUB_APP_ID = os.getenv("GITHUB_APP_ID", "0")
 GITHUB_PRIVATE_KEY_PATH = os.getenv("GITHUB_PRIVATE_KEY_PATH", "")
@@ -166,5 +168,64 @@ def retrieve_relevant_chunks(
         )
         results = db.execute(stmt).scalars().all()
         return results
+    finally:
+        db.close()
+
+
+def index_changed_files(
+    repo_full_name: str,
+    installation_id: int,
+    repository_id: int,
+    changed_paths: list[str],
+) -> int:
+    paths_to_index = [p for p in changed_paths if should_index(p)]
+    if not paths_to_index:
+        return 0
+
+    with open(GITHUB_PRIVATE_KEY_PATH, "r") as f:
+        private_key = f.read()
+
+    auth = Auth.AppAuth(GITHUB_APP_ID, private_key)
+    gi = GithubIntegration(auth=auth)
+    github_client = gi.get_github_for_installation(installation_id)
+    repo = github_client.get_repo(repo_full_name)
+    default_branch = repo.default_branch
+
+    db = SyncSessionLocal()
+    try:
+        total_chunks = 0
+        for path in paths_to_index:
+            db.query(CodeChunk).filter(
+                CodeChunk.repository_id == repository_id,
+                CodeChunk.file_path == path,
+            ).delete()
+
+            try:
+                file_content = repo.get_contents(path, ref=default_branch)
+            except Exception:
+                logger.warning(f"Could not fetch {path}, skipping")
+                continue
+
+            content = file_content.decoded_content.decode("utf-8", errors="replace")
+            chunks = chunk_code(content)
+            if not chunks:
+                continue
+
+            vectors = embed_texts([c.content for c in chunks])
+            for chunk, vector in zip(chunks, vectors):
+                db.add(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=path,
+                        start_line=chunk.start_line,
+                        end_line=chunk.end_line,
+                        content=chunk.content,
+                        embedding=vector,
+                    )
+                )
+            total_chunks += len(chunks)
+
+        db.commit()
+        return total_chunks
     finally:
         db.close()

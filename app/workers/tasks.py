@@ -1,7 +1,11 @@
 import logging
 
 from app.db.session import SyncSessionLocal
-from app.services.indexing import index_repository, retrieve_relevant_chunks
+from app.services.indexing import (
+    index_changed_files,
+    index_repository,
+    retrieve_relevant_chunks,
+)
 from app.services.persistence import (
     complete_review,
     create_review,
@@ -10,6 +14,7 @@ from app.services.persistence import (
     upsert_repository,
 )
 from app.services.review_service import (
+    fetch_pr_changed_files,
     fetch_pr_diff,
     generate_review,
     post_review_comment,
@@ -92,4 +97,22 @@ def index_repository_task(
     logger.info(f"Worker picked up indexing job for {repo_full_name}")
     count = index_repository(repo_full_name, installation_id, repository_id)
     logger.info(f"Indexed {count} chunks for {repo_full_name}")
+    return {"status": "completed", "chunks": count}
+
+
+@celery_app.task(name="delta_index_repository")
+def delta_index_repository_task(
+    repo_full_name: str,
+    pr_number: int,
+    installation_id: int,
+    repository_id: int,
+):
+    logger.info(
+        f"Worker picked up delta-index job for {repo_full_name} PR #{pr_number}"
+    )
+    changed_paths = fetch_pr_changed_files(repo_full_name, pr_number, installation_id)
+    count = index_changed_files(
+        repo_full_name, installation_id, repository_id, changed_paths
+    )
+    logger.info(f"Delta-indexed {count} chunks from {len(changed_paths)} changed files")
     return {"status": "completed", "chunks": count}

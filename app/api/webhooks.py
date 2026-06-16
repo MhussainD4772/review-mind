@@ -8,7 +8,11 @@ from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.db.session import SyncSessionLocal
 from app.services.persistence import upsert_repository
-from app.workers.tasks import index_repository_task, review_pull_request
+from app.workers.tasks import (
+    delta_index_repository_task,
+    index_repository_task,
+    review_pull_request,
+)
 
 load_dotenv()
 
@@ -58,6 +62,32 @@ async def github_webhook(
                 github_repo_id=repo["id"],
                 installation_id=data["installation"]["id"],
                 pr_author=pr["user"]["login"],
+            )
+
+        if action == "closed" and data["pull_request"].get("merged"):
+            pr = data["pull_request"]
+            repo = data["repository"]
+            installation_id = data["installation"]["id"]
+
+            db = SyncSessionLocal()
+            try:
+                repository_id = upsert_repository(
+                    db,
+                    repo["id"],
+                    repo["full_name"],
+                    installation_id,
+                )
+            finally:
+                db.close()
+
+            logger.info(
+                f"PR #{pr['number']} merged in {repo['full_name']}, delta-indexing"
+            )
+            delta_index_repository_task.delay(
+                repo_full_name=repo["full_name"],
+                pr_number=pr["number"],
+                installation_id=installation_id,
+                repository_id=repository_id,
             )
 
     if x_github_event == "installation":
