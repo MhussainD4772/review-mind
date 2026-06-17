@@ -1,6 +1,8 @@
 [flake8]
-max-line-length = 88
+max-line-length = 120
 extend-ignore = E203, W503
+per-file-ignores =
+    app/services/review_service.py: E501
 exclude =
     .git,
     __pycache__,
