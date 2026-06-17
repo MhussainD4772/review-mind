@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql import func
 
-from app.models.models import PullRequest, Repository, Review, ReviewStatus
+from app.models.models import CodeChunk, PullRequest, Repository, Review, ReviewStatus
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,18 @@ def upsert_pull_request(db, repo_id, github_pr_number, title, author):
     pr_id = db.execute(stmt).scalar_one()
     db.commit()
     return pr_id
+
+
+def repository_chunk_count(db, repository_id):
+    return db.query(CodeChunk).filter(CodeChunk.repository_id == repository_id).count()
+
+
+def delete_repository_chunks(db, repository_id):
+    deleted = (
+        db.query(CodeChunk).filter(CodeChunk.repository_id == repository_id).delete()
+    )
+    db.commit()
+    return deleted
 
 
 def create_review(db, pull_request_id):

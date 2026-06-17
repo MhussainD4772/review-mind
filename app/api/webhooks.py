@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.db.session import SyncSessionLocal
-from app.services.persistence import upsert_repository
+from app.services.persistence import delete_repository_chunks, upsert_repository
 from app.workers.tasks import (
     delta_index_repository_task,
     index_repository_task,
@@ -114,5 +114,45 @@ async def github_webhook(
                     )
             finally:
                 db.close()
+
+    if x_github_event == "installation_repositories":
+        data = await request.json()
+        installation_id = data["installation"]["id"]
+        added = data.get("repositories_added", [])
+        removed = data.get("repositories_removed", [])
+
+        db = SyncSessionLocal()
+        try:
+            for repo in added:
+                repository_id = upsert_repository(
+                    db,
+                    repo["id"],
+                    repo["full_name"],
+                    installation_id,
+                )
+                logger.info(
+                    f"Repo added to installation: {repo['full_name']}, "
+                    "indexing queued"
+                )
+                index_repository_task.delay(
+                    repo_full_name=repo["full_name"],
+                    installation_id=installation_id,
+                    repository_id=repository_id,
+                )
+
+            for repo in removed:
+                repository_id = upsert_repository(
+                    db,
+                    repo["id"],
+                    repo["full_name"],
+                    installation_id,
+                )
+                deleted = delete_repository_chunks(db, repository_id)
+                logger.info(
+                    f"Repo removed from installation: {repo['full_name']}, "
+                    f"deleted {deleted} chunks"
+                )
+        finally:
+            db.close()
 
     return {"status": "ok"}
