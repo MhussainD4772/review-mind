@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 
-from app.db.session import Base
+from app.db.base import Base
 
 
 class Repository(Base):
