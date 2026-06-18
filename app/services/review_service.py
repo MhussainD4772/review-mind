@@ -5,6 +5,8 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from github import Auth, GithubIntegration
 
+from app.core.github_auth import get_github_for_installation
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -86,12 +88,7 @@ Do not insert unnecessary symbols, dashes, em dashes, bullets, or decorative cha
 
 
 def post_placeholder_comment(repo_full_name: str, pr_number: int, installation_id: int):
-    with open(GITHUB_PRIVATE_KEY_PATH, "r") as f:
-        private_key = f.read()
-
-    auth = Auth.AppAuth(GITHUB_APP_ID, private_key)
-    gi = GithubIntegration(auth=auth)
-    github_client = gi.get_github_for_installation(installation_id)
+    github_client = get_github_for_installation(installation_id)
 
     repo = github_client.get_repo(repo_full_name)
     pull_request = repo.get_pull(pr_number)
