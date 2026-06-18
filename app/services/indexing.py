@@ -1,12 +1,10 @@
 import logging
-import os
 import re
 import time
 from dataclasses import dataclass
 
 import google.generativeai as genai
 from dotenv import load_dotenv
-from github import Auth, GithubIntegration
 from google.api_core.exceptions import ResourceExhausted
 from sqlalchemy import select
 
@@ -17,9 +15,6 @@ from app.services.symbols import build_definition_pattern, extract_referenced_sy
 
 load_dotenv()
 logger = logging.getLogger(__name__)
-
-GITHUB_APP_ID = os.getenv("GITHUB_APP_ID", "0")
-GITHUB_PRIVATE_KEY_PATH = os.getenv("GITHUB_PRIVATE_KEY_PATH", "")
 
 WINDOW_SIZE = 40
 OVERLAP_SIZE = 10
@@ -318,12 +313,7 @@ def index_changed_files(
     if not paths_to_index:
         return 0
 
-    with open(GITHUB_PRIVATE_KEY_PATH, "r") as f:
-        private_key = f.read()
-
-    auth = Auth.AppAuth(GITHUB_APP_ID, private_key)
-    gi = GithubIntegration(auth=auth)
-    github_client = gi.get_github_for_installation(installation_id)
+    github_client = get_github_for_installation(installation_id)
     repo = github_client.get_repo(repo_full_name)
     default_branch = repo.default_branch
 
